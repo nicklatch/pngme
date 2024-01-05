@@ -17,7 +17,7 @@ impl TryFrom<[u8; 4]> for ChunkType {
     fn try_from(bytes: [u8; 4]) -> Result<Self, Self::Error> {
         for byte in bytes.iter() {
             if !ChunkType::is_valid_byte(*byte) {
-                return Err(Box::new(DecodeError::InvalidByte(*byte)));
+                return Err(Box::new(ChunkTypeDecodeError::InvalidByte(*byte)));
             }
         }
         Ok(ChunkType { bytes })
@@ -28,7 +28,7 @@ impl FromStr for ChunkType {
     type Err = crate::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.len() != 4 {
-            return Err(Box::new(DecodeError::InvalidLen(s.len())));
+            return Err(Box::new(ChunkTypeDecodeError::InvalidLen(s.len())));
         }
 
         let mut temp: [u8; 4] = [0; 4];
@@ -37,7 +37,7 @@ impl FromStr for ChunkType {
             if ChunkType::is_valid_byte(*byte) {
                 temp[i] = *byte
             } else {
-                return Err(Box::new(DecodeError::InvalidByte(*byte)));
+                return Err(Box::new(ChunkTypeDecodeError::InvalidByte(*byte)));
             }
         }
 
@@ -93,12 +93,12 @@ impl ChunkType {
 }
 
 #[derive(Debug)]
-pub enum DecodeError {
+pub enum ChunkTypeDecodeError {
     InvalidByte(u8),
     InvalidLen(usize),
 }
 
-impl fmt::Display for DecodeError {
+impl fmt::Display for ChunkTypeDecodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidByte(byte) => write!(f, "Invalid Byte: {byte} ({byte:b}", byte = byte),
@@ -107,7 +107,7 @@ impl fmt::Display for DecodeError {
     }
 }
 
-impl Error for DecodeError {}
+impl Error for ChunkTypeDecodeError {}
 
 
 // ----------TESTS-------------//

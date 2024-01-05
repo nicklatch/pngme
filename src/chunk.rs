@@ -80,7 +80,6 @@ impl Display for Chunk {
     }
 }
 
-// TODO:
 impl Chunk {
     pub fn new(chunk_type: ChunkType, chunk_data: Vec<u8>) -> Chunk {
         Chunk {
@@ -142,8 +141,8 @@ impl Chunk {
     }
 }
 
+// TODO: Better error handeling
 type ReasonMsg = String;
-
 #[derive(Debug)]
 pub struct InvalidChunkError(ReasonMsg);
 
