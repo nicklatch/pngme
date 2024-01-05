@@ -5,22 +5,22 @@ use crate::chunk_type::ChunkType;
 
 pub struct Chunk(ChunkType);
 
-impl TryFrom<&[u8]> for Chunk {
-    let Error = crate::Error
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        todo!()
-    }
-}
+// TODO:
+//impl TryFrom<&[u8]> for Chunk {
+//     let Error = crate::Error
+//     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+//         todo!()
+//     }
+// }
 
-impl fmt::Display for  Chunk{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
-    }
+// impl fmt::Display for  Chunk{
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         todo!()
+//     }
 
-}
+// }
 
-
-
+// TODO:
 impl Chunk {
     fn new(chunk_type: ChunkType, data: Vec<u8>) -> Chunk {
         todo!()
