@@ -1,12 +1,17 @@
-use std::fmt::Display;
+#![allow(dead_code, unused_variables)]
+
 use crate::chunk::Chunk;
+use std::{
+    error::Error,
+    fmt::{self, Display},
+};
 
-// TODO: everything
-
+#[derive(Debug)]
 pub struct Png {
     chunks: Vec<Chunk>,
 }
 
+//TODO: Tackle this beast
 impl TryFrom<&[u8]> for Png {
     type Error = crate::Error;
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
@@ -16,33 +21,77 @@ impl TryFrom<&[u8]> for Png {
 
 impl Display for Png {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        for chunk in self.chunks.iter() {
+            write!(f, "{}", chunk)?;
+        }
+        Ok(())
     }
 }
 
 impl Png {
-    const STANDARD_HEADER: [u8; 8] = *b"\x89PNG\r\n\x1a\n";
+    const STANDARD_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
 
     fn from_chunks(chunks: Vec<Chunk>) -> Png {
         Png { chunks }
     }
+
     fn append_chunk(&mut self, chunk: Chunk) {
         self.chunks.push(chunk);
     }
+
     fn remove_chunk(&mut self, chunk_type: &str) -> crate::Result<Chunk> {
-        todo!()
+        let idx = self
+            .chunks
+            .iter()
+            .position(|chunk| chunk.chunk_type().to_string() == chunk_type)
+            .ok_or(PngDecodeError::InvalidChunkType(chunk_type.to_string()))?;
+
+        Ok(self.chunks.remove(idx))
     }
+
     fn header(&self) -> &[u8; 8] {
-        todo!()
+        &Png::STANDARD_HEADER
     }
+
     fn chunks(&self) -> &[Chunk] {
-        todo!()
+        &self.chunks
     }
+
     fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk> {
-        todo!()
+        self.chunks
+            .iter()
+            .find(|chunk: &&Chunk| chunk.chunk_type().to_string() == chunk_type)
     }
+
     fn as_bytes(&self) -> Vec<u8> {
-        todo!()
+        let chunk_iters: Vec<u8> = self
+            .chunks
+            .iter()
+            .flat_map(|chunk| chunk.as_bytes())
+            .collect();
+
+        self.header()
+            .iter()
+            .chain(chunk_iters.iter())
+            .copied()
+            .collect()
+    }
+}
+
+#[derive(Debug)]
+pub enum PngDecodeError {
+    InvalidHeader,
+    InvalidChunkType(String),
+}
+
+impl Error for PngDecodeError {}
+
+impl fmt::Display for PngDecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PngDecodeError::InvalidHeader => write!(f, "Invalid Header"),
+            PngDecodeError::InvalidChunkType(s) => write!(f, "Chunk Type {} was not found", s),
+        }
     }
 }
 

@@ -10,6 +10,7 @@ use std::{
 
 const MAXIMUM_LENGTH: u32 = (1 << 31) - 1;
 
+#[derive(Debug)]
 pub struct Chunk {
     length: u32,
     chunk_type: ChunkType,
