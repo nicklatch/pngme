@@ -6,7 +6,7 @@ use std::fmt;
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct ChunkType {
     bytes: [u8; 4],
 }
@@ -16,7 +16,7 @@ impl TryFrom<[u8; 4]> for ChunkType {
 
     fn try_from(bytes: [u8; 4]) -> Result<Self, Self::Error> {
         for byte in bytes.iter() {
-            if !Self::is_valid_byte(*byte) {
+            if !ChunkType::is_valid_byte(*byte) {
                 return Err(Box::new(DecodeError::InvalidByte(*byte)));
             }
         }
@@ -34,7 +34,7 @@ impl FromStr for ChunkType {
         let mut temp: [u8; 4] = [0; 4];
 
         for (i, byte) in s.as_bytes().iter().enumerate() {
-            if Self::is_valid_byte(*byte) {
+            if ChunkType::is_valid_byte(*byte) {
                 temp[i] = *byte
             } else {
                 return Err(Box::new(DecodeError::InvalidByte(*byte)));
@@ -55,12 +55,12 @@ impl Display for ChunkType {
 }
 
 impl ChunkType {
-    fn bytes(&self) -> [u8; 4] {
+    pub fn bytes(&self) -> [u8; 4] {
         self.bytes
     }
 
     fn is_valid(&self) -> bool {
-        (self.bytes.len() == 4) && Self::is_reserved_bit_valid(self) && Self::all_valid_bytes(self)
+        (self.bytes.len() == 4) && ChunkType::is_reserved_bit_valid(self) && ChunkType::all_valid_bytes(self)
     }
 
     fn is_valid_byte(byte: u8) -> bool {
@@ -72,7 +72,7 @@ impl ChunkType {
     }
 
     fn all_valid_bytes(&self) -> bool {
-        self.bytes.iter().all(|&byte| Self::is_valid_byte(byte))
+        self.bytes.iter().all(|&byte| ChunkType::is_valid_byte(byte))
     }
 
     fn is_critical(&self) -> bool {
