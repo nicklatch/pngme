@@ -1,14 +1,51 @@
-use core::fmt;
-use std::error::Error;
+#![allow(dead_code)]
 
-// TODO: Left off at 1. Chunk Types req.3-5
+use std::convert::{From, TryFrom};
+use std::error::Error;
+use std::fmt;
+use std::fmt::Display;
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ChunkType {
     bytes: [u8; 4],
 }
 
-impl fmt::Display for ChunkType {
+impl TryFrom<[u8; 4]> for ChunkType {
+    type Error = crate::Error;
+
+    fn try_from(bytes: [u8; 4]) -> Result<Self, Self::Error> {
+        for byte in bytes.iter() {
+            if !Self::is_valid_byte(*byte) {
+                return Err(Box::new(DecodeError::InvalidByte(*byte)));
+            }
+        }
+        Ok(ChunkType { bytes })
+    }
+}
+
+impl FromStr for ChunkType {
+    type Err = crate::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 4 {
+            return Err(Box::new(DecodeError::InvalidLen(s.len())));
+        }
+
+        let mut temp: [u8; 4] = [0; 4];
+
+        for (i, byte) in s.as_bytes().iter().enumerate() {
+            if Self::is_valid_byte(*byte) {
+                temp[i] = *byte
+            } else {
+                return Err(Box::new(DecodeError::InvalidByte(*byte)));
+            }
+        }
+
+        Ok(ChunkType { bytes: temp })
+    }
+}
+
+impl Display for ChunkType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in &self.bytes {
             write!(f, "{}", char::from(*byte))?;
@@ -17,43 +54,61 @@ impl fmt::Display for ChunkType {
     }
 }
 
-impl Error for ChunkType {}
-
-impl TryFrom<[u8; 4]> for ChunkType {
-    type Error = crate::Error;
-
-    // ASCII A-Z or a-z (decimal 65-90 and 97-122)
-    fn try_from(bytes: [u8; 4]) -> Result<Self, Self::Error> {
-        for byte in bytes.iter() {
-            match (*byte >= 65 && *byte <= 90) || (*byte >= 97 && *byte <= 122) {
-                true => continue,
-                false => Err(Self::Error), // TODO: add some sort of Error enum for create error type for this
-            }
-        }
-        Ok(ChunkType { bytes })
-    }
-}
-
 impl ChunkType {
     fn bytes(&self) -> [u8; 4] {
-        todo!()
+        self.bytes
     }
+
     fn is_valid(&self) -> bool {
-        todo!()
+        (self.bytes.len() == 4) && Self::is_reserved_bit_valid(self) && Self::all_valid_bytes(self)
     }
+
+    fn is_valid_byte(byte: u8) -> bool {
+        matches!(byte, 65..=90 | 97..=122)
+    }
+
+    fn semantic_bit_is_zero(bit: u8) -> bool {
+        bit & (1 << 5) == 0
+    }
+
+    fn all_valid_bytes(&self) -> bool {
+        self.bytes.iter().all(|&byte| Self::is_valid_byte(byte))
+    }
+
     fn is_critical(&self) -> bool {
-        todo!()
+        Self::semantic_bit_is_zero(self.bytes[0])
     }
+
     fn is_public(&self) -> bool {
-        todo!()
+        Self::semantic_bit_is_zero(self.bytes[1])
     }
+
     fn is_reserved_bit_valid(&self) -> bool {
-        todo!()
+        Self::semantic_bit_is_zero(self.bytes[2])
     }
+
     fn is_safe_to_copy(&self) -> bool {
-        todo!()
+        !Self::semantic_bit_is_zero(self.bytes[3])
     }
 }
+
+#[derive(Debug)]
+pub enum DecodeError {
+    InvalidByte(u8),
+    InvalidLen(usize),
+}
+
+impl fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidByte(byte) => write!(f, "Invalid Byte: {byte} ({byte:b}", byte = byte),
+            Self::InvalidLen(len) => write!(f, "Invalid Length: Expected 4, recieved {len}"),
+        }
+    }
+}
+
+impl Error for DecodeError {}
+
 
 // ----------TESTS-------------//
 
