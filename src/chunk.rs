@@ -1,48 +1,162 @@
-use core::fmt;
-use std::path::Display;
+#![allow(dead_code)]
 
 use crate::chunk_type::ChunkType;
+use core::fmt;
+use crc::{Crc, CRC_32_ISO_HDLC};
+use std::{
+    fmt::Display,
+    io::{BufReader, Read},
+};
 
-pub struct Chunk(ChunkType);
+const MAXIMUM_LENGTH: u32 = (1 << 31) - 1;
 
-// TODO:
-//impl TryFrom<&[u8]> for Chunk {
-//     let Error = crate::Error
-//     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-//         todo!()
-//     }
-// }
+pub struct Chunk {
+    length: u32,
+    chunk_type: ChunkType,
+    chunk_data: Vec<u8>,
+    crc: u32,
+}
 
-// impl fmt::Display for  Chunk{
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         todo!()
-//     }
+// TODO: Refactor this mess
+impl TryFrom<&[u8]> for Chunk {
+    type Error = crate::Error;
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        //Creates a new BuffReader that reads into the buffer
+        let mut reader = BufReader::new(bytes);
+        let mut buffer: [u8; 4] = [0; 4];
 
-// }
+        // length will always be u32 (u8 * 4 == u32)
+        reader.read_exact(&mut buffer)?;
+        let length = u32::from_be_bytes(buffer);
+
+        if length > MAXIMUM_LENGTH {
+            return Err(InvalidChunkError::boxed(format!(
+                "Length of {length} is greater than {MAXIMUM_LENGTH}"
+            )));
+        }
+
+        // read in length from buffer
+        reader.read_exact(&mut buffer)?;
+        let chunk_type = ChunkType::try_from(buffer)?;
+
+        //establish a vector the size of length, then read the chunk data into it
+        let mut chunk_data = vec![0; usize::try_from(length)?];
+        reader.read_exact(&mut chunk_data)?;
+
+        //chunk_data's length should be the same as length
+        if chunk_data.len() != length.try_into()? {
+            return Err(InvalidChunkError::boxed(format!(
+                "Data length {} does not equal expected of {}",
+                chunk_data.len(),
+                length,
+            )));
+        }
+
+        // read in crc and test it agains our correct crc
+        reader.read_exact(&mut buffer)?;
+        let tried_crc = u32::from_be_bytes(buffer);
+        let real_crc: u32 =
+            Self::gen_u32_crc(&[&chunk_type.bytes(), chunk_data.as_slice()].concat());
+        if tried_crc != real_crc {
+            return Err(InvalidChunkError::boxed("CRC Check failed".to_string()));
+        }
+
+        Ok(Chunk::new_with_all_fields(
+            length, chunk_type, chunk_data, real_crc,
+        ))
+    }
+}
+
+impl Display for Chunk {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}\t{}",
+            self.chunk_type(),
+            self.data_as_string()
+                .unwrap_or_else(|_| "[data]".to_string())
+        )
+    }
+}
 
 // TODO:
 impl Chunk {
-    fn new(chunk_type: ChunkType, data: Vec<u8>) -> Chunk {
-        todo!()
+    pub fn new(chunk_type: ChunkType, chunk_data: Vec<u8>) -> Chunk {
+        Chunk {
+            length: chunk_data.len() as u32,
+            chunk_type,
+            chunk_data: chunk_data.clone(),
+            crc: Self::gen_u32_crc(&[&chunk_type.bytes(), chunk_data.as_slice()].concat()),
+        }
     }
-    fn length(&self) -> u32 {
-        todo!()
+
+    pub fn new_with_all_fields(
+        length: u32,
+        chunk_type: ChunkType,
+        chunk_data: Vec<u8>,
+        crc: u32,
+    ) -> Self {
+        Chunk {
+            length,
+            chunk_type,
+            chunk_data,
+            crc,
+        }
     }
-    fn chunk_type(&self) -> &ChunkType {
-        todo!()
+
+    pub fn gen_u32_crc(bytes: &[u8]) -> u32 {
+        const ALGO: Crc<u32> = Crc::<u32>::new(&CRC_32_ISO_HDLC);
+        Crc::<u32>::checksum(&ALGO, bytes)
     }
-    fn data(&self) -> &[u8] {
-        todo!()
+
+    pub fn length(&self) -> u32 {
+        self.length
     }
-    fn crc(&self) -> u32 {
-        todo!()
+
+    pub fn chunk_type(&self) -> &ChunkType {
+        &self.chunk_type
     }
-    fn data_as_string(&self) -> Result<String> {
-        todo!();
-        Ok("")
+
+    pub fn data(&self) -> &[u8] {
+        self.chunk_data.as_slice()
     }
-    fn as_bytes(&self) -> Vec<u8> {
-        todo!()
+
+    pub fn crc(&self) -> u32 {
+        self.crc
+    }
+
+    pub fn data_as_string(&self) -> crate::Result<String> {
+        Ok(String::from_utf8(self.chunk_data.clone()).map_err(Box::new)?)
+    }
+
+    pub fn as_bytes(&self) -> Vec<u8> {
+        self.length()
+            .to_be_bytes()
+            .iter()
+            .chain(self.chunk_type().bytes().iter())
+            .chain(self.data().iter())
+            .chain(self.crc.to_be_bytes().iter())
+            .copied()
+            .collect()
+    }
+}
+
+type ReasonMsg = String;
+
+#[derive(Debug)]
+pub struct InvalidChunkError(ReasonMsg);
+
+impl fmt::Display for InvalidChunkError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Invalid Chunk: {}", self.0)
+    }
+}
+
+impl std::error::Error for InvalidChunkError {}
+
+impl InvalidChunkError {
+    fn boxed(reason: ReasonMsg) -> Box<Self> {
+        Box::new(Self(reason))
     }
 }
 
