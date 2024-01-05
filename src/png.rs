@@ -1,6 +1,7 @@
 use std::fmt::Display;
-
 use crate::chunk::Chunk;
+
+// TODO: everything
 
 pub struct Png {
     chunks: Vec<Chunk>,
