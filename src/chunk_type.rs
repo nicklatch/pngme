@@ -60,7 +60,9 @@ impl ChunkType {
     }
 
     fn is_valid(&self) -> bool {
-        (self.bytes.len() == 4) && ChunkType::is_reserved_bit_valid(self) && ChunkType::all_valid_bytes(self)
+        (self.bytes.len() == 4)
+            && ChunkType::is_reserved_bit_valid(self)
+            && ChunkType::all_valid_bytes(self)
     }
 
     fn is_valid_byte(byte: u8) -> bool {
@@ -72,7 +74,9 @@ impl ChunkType {
     }
 
     fn all_valid_bytes(&self) -> bool {
-        self.bytes.iter().all(|&byte| ChunkType::is_valid_byte(byte))
+        self.bytes
+            .iter()
+            .all(|&byte| ChunkType::is_valid_byte(byte))
     }
 
     fn is_critical(&self) -> bool {
@@ -96,6 +100,7 @@ impl ChunkType {
 pub enum ChunkTypeDecodeError {
     InvalidByte(u8),
     InvalidLen(usize),
+    UnkownError,
 }
 
 impl fmt::Display for ChunkTypeDecodeError {
@@ -103,12 +108,12 @@ impl fmt::Display for ChunkTypeDecodeError {
         match self {
             Self::InvalidByte(byte) => write!(f, "Invalid Byte: {byte} ({byte:b}", byte = byte),
             Self::InvalidLen(len) => write!(f, "Invalid Length: Expected 4, recieved {len}"),
+            Self::UnkownError => write!(f, "An unkown error has occured"),
         }
     }
 }
 
 impl Error for ChunkTypeDecodeError {}
-
 
 // ----------TESTS-------------//
 

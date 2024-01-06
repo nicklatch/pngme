@@ -4,11 +4,11 @@ use crate::chunk_type::ChunkType;
 use core::fmt;
 use crc::{Crc, CRC_32_ISO_HDLC};
 use std::{
-    fmt::Display,
+    fmt::{write, Display},
     io::{BufReader, Read},
 };
 
-const MAXIMUM_LENGTH: u32 = (1 << 31) - 1;
+const MAXIMUM_LENGTH: u32 = 2_147_483_647;
 
 #[derive(Debug)]
 pub struct Chunk {
@@ -31,9 +31,7 @@ impl TryFrom<&[u8]> for Chunk {
         let length = u32::from_be_bytes(buffer);
 
         if length > MAXIMUM_LENGTH {
-            return Err(InvalidChunkError::boxed(format!(
-                "Length of {length} is greater than {MAXIMUM_LENGTH}"
-            )));
+            return Err(Box::from(ChunkError::InvalidLengthGT(length)));
         }
 
         // read in length from buffer
@@ -46,10 +44,9 @@ impl TryFrom<&[u8]> for Chunk {
 
         //chunk_data's length should be the same as length
         if chunk_data.len() != length.try_into()? {
-            return Err(InvalidChunkError::boxed(format!(
-                "Data length {} does not equal expected of {}",
-                chunk_data.len(),
-                length,
+            return Err(Box::from(ChunkError::InvalidLengthCmp(
+                chunk_data.len() as u32,
+                length.try_into()?,
             )));
         }
 
@@ -59,7 +56,7 @@ impl TryFrom<&[u8]> for Chunk {
         let real_crc: u32 =
             Self::gen_u32_crc(&[&chunk_type.bytes(), chunk_data.as_slice()].concat());
         if tried_crc != real_crc {
-            return Err(InvalidChunkError::boxed("CRC Check failed".to_string()));
+            return Err(Box::from(ChunkError::InvalidCrc(real_crc, tried_crc)));
         }
 
         Ok(Chunk::new_with_all_fields(
@@ -140,11 +137,10 @@ impl Chunk {
             .collect()
     }
 }
-
-// TODO: Better error handeling
-type ReasonMsg = String;
+// TODO: IMPROVE ERROR HANDLING
+type ErrorMsg = String;
 #[derive(Debug)]
-pub struct InvalidChunkError(ReasonMsg);
+pub struct InvalidChunkError(ErrorMsg);
 
 impl fmt::Display for InvalidChunkError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -155,10 +151,44 @@ impl fmt::Display for InvalidChunkError {
 impl std::error::Error for InvalidChunkError {}
 
 impl InvalidChunkError {
-    fn boxed(reason: ReasonMsg) -> Box<Self> {
+    fn boxed(reason: ErrorMsg) -> Box<Self> {
         Box::new(Self(reason))
     }
 }
+
+#[derive(Debug)]
+pub enum ChunkError {
+    InvalidLengthGT(u32),
+    InvalidLengthCmp(u32, u32),
+    ChunkTooSmall(u32),
+    InvalidChunkType,
+    InvalidCrc(u32, u32),
+}
+
+impl fmt::Display for ChunkError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            ChunkError::InvalidLengthGT(length) => write!(
+                f,
+                "Chunk length greater than 2,147,483,647: Actual {length}"
+            ),
+            ChunkError::InvalidLengthCmp(expected, actual) => {
+                write!(f, "Expected: {expected}, Actual: {actual}")
+            }
+            ChunkError::InvalidChunkType => write!(f, "{}", ""),
+            ChunkError::InvalidCrc(expected, actual) => write!(
+                f,
+                "The provided CRC of {expected} does not match the expected CRC of {actual}"
+            ),
+            ChunkError::ChunkTooSmall(bytes) => {
+                write!(f, "Chunk is smaller than 12 bytes. Actual: {bytes}")
+            }
+            ChunkError::InvalidChunkType => write!(f, "Invalid Chunk Type"),
+        }
+    }
+}
+
+impl std::error::Error for ChunkError {}
 
 // ----------TESTS-------------//
 
