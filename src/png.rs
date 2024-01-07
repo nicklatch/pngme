@@ -11,11 +11,37 @@ pub struct Png {
     chunks: Vec<Chunk>,
 }
 
-//TODO: Tackle this beast
 impl TryFrom<&[u8]> for Png {
     type Error = crate::Error;
-    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        todo!()
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let header: [u8; 8] = value[..8].try_into()?;
+
+        if !header.eq(&Png::STANDARD_HEADER) {
+            return Err(PngDecodeError::InvalidHeader.into());
+        }
+
+        let mut chunks: Vec<Chunk> = Vec::new();
+        let mut cursor: usize = 8;
+
+        while cursor < value.len() {
+            let length = (u32::from_be_bytes(value[cursor..cursor + 4].try_into()?) + 12) as usize;
+
+            match Chunk::try_from(&value[cursor..cursor + length]) {
+                Ok(chunk) => {
+                    chunks.push(chunk);
+                    cursor += length;
+                }
+                Err(_) => {
+                    return Err(PngDecodeError::PngGeneralError(String::from(
+                        "An unknown error has occured",
+                    ))
+                    .into());
+                }
+            }
+        }
+
+        Ok(Png { chunks })
     }
 }
 
@@ -82,6 +108,7 @@ impl Png {
 pub enum PngDecodeError {
     InvalidHeader,
     InvalidChunkType(String),
+    PngGeneralError(String),
 }
 
 impl Error for PngDecodeError {}
@@ -90,7 +117,8 @@ impl fmt::Display for PngDecodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             PngDecodeError::InvalidHeader => write!(f, "Invalid Header"),
-            PngDecodeError::InvalidChunkType(s) => write!(f, "Chunk Type {} was not found", s),
+            PngDecodeError::InvalidChunkType(s) => write!(f, "Chunk Type {s} was not found"),
+            PngDecodeError::PngGeneralError(msg) => write!(f, "General Error with {msg}"),
         }
     }
 }
@@ -101,7 +129,6 @@ mod tests {
     use crate::chunk::Chunk;
     use crate::chunk_type::ChunkType;
     use std::convert::TryFrom;
-    use std::str::FromStr;
 
     fn testing_chunks() -> Vec<Chunk> {
         vec![

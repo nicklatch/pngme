@@ -31,7 +31,7 @@ impl TryFrom<&[u8]> for Chunk {
         let length = u32::from_be_bytes(buffer);
 
         if length > MAXIMUM_LENGTH {
-            return Err(Box::from(ChunkError::InvalidLengthGT(length)));
+            return Err(ChunkError::InvalidLengthGT(length).into());
         }
 
         // read in length from buffer
@@ -44,10 +44,9 @@ impl TryFrom<&[u8]> for Chunk {
 
         //chunk_data's length should be the same as length
         if chunk_data.len() != length.try_into()? {
-            return Err(Box::from(ChunkError::InvalidLengthCmp(
-                chunk_data.len() as u32,
-                length.try_into()?,
-            )));
+            return Err(
+                ChunkError::InvalidLengthCmp(chunk_data.len() as u32, length.try_into()?).into(),
+            );
         }
 
         // read in crc and test it agains our correct crc
@@ -56,7 +55,7 @@ impl TryFrom<&[u8]> for Chunk {
         let real_crc: u32 =
             Self::gen_u32_crc(&[&chunk_type.bytes(), chunk_data.as_slice()].concat());
         if tried_crc != real_crc {
-            return Err(Box::from(ChunkError::InvalidCrc(real_crc, tried_crc)));
+            return Err(ChunkError::InvalidCrc(real_crc, tried_crc).into());
         }
 
         Ok(Chunk::new_with_all_fields(
