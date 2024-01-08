@@ -75,3 +75,46 @@ fn print(args: PrintArgs) -> Result<()> {
     png.chunks().iter().for_each(|chunk| println!("{chunk}"));
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_encode() {
+        let args = EncodeArgs {
+            file_path: PathBuf::from("test.png"),
+            chunk_type: String::from("tEXt"),
+            message: String::from("Test message"),
+            output_file: None,
+        };
+        assert!(encode(args).is_ok());
+    }
+
+    #[test]
+    fn test_decode() {
+        let args = DecodeArgs {
+            file_path: PathBuf::from("test.png"),
+            chunk_type: String::from("tEXt"),
+        };
+        assert!(decode(args).is_ok());
+    }
+
+    #[test]
+    fn test_remove() {
+        let args = RemoveArgs {
+            file_path: PathBuf::from("test.png"),
+            chunk_type: String::from("tEXt"),
+        };
+        assert!(remove(args).is_ok());
+    }
+
+    #[test]
+    fn test_print() {
+        let args = PrintArgs {
+            file_path: PathBuf::from("test.png"),
+        };
+        assert!(print(args).is_ok());
+    }
+}
