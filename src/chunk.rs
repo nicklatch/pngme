@@ -179,8 +179,7 @@ impl fmt::Display for ChunkError {
             ),
             ChunkError::ChunkTooSmall(bytes) => {
                 write!(f, "Chunk is smaller than 12 bytes. Actual: {bytes}")
-            }
-            // ChunkError::InvalidChunkType => write!(f, "Invalid Chunk Type"),
+            } // ChunkError::InvalidChunkType => write!(f, "Invalid Chunk Type"),
         }
     }
 }
