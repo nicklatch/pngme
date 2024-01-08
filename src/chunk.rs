@@ -4,7 +4,7 @@ use crate::chunk_type::ChunkType;
 use core::fmt;
 use crc::{Crc, CRC_32_ISO_HDLC};
 use std::{
-    fmt::{write, Display},
+    fmt::Display,
     io::{BufReader, Read},
 };
 
@@ -44,9 +44,7 @@ impl TryFrom<&[u8]> for Chunk {
 
         //chunk_data's length should be the same as length
         if chunk_data.len() != length.try_into()? {
-            return Err(
-                ChunkError::InvalidLengthCmp(chunk_data.len() as u32, length.try_into()?).into(),
-            );
+            return Err(ChunkError::InvalidLengthCmp(chunk_data.len() as u32, length).into());
         }
 
         // read in crc and test it agains our correct crc
@@ -174,7 +172,7 @@ impl fmt::Display for ChunkError {
             ChunkError::InvalidLengthCmp(expected, actual) => {
                 write!(f, "Expected: {expected}, Actual: {actual}")
             }
-            ChunkError::InvalidChunkType => write!(f, "{}", ""),
+            ChunkError::InvalidChunkType => write!(f, "Invalid Chunk Type",),
             ChunkError::InvalidCrc(expected, actual) => write!(
                 f,
                 "The provided CRC of {expected} does not match the expected CRC of {actual}"
@@ -182,7 +180,7 @@ impl fmt::Display for ChunkError {
             ChunkError::ChunkTooSmall(bytes) => {
                 write!(f, "Chunk is smaller than 12 bytes. Actual: {bytes}")
             }
-            ChunkError::InvalidChunkType => write!(f, "Invalid Chunk Type"),
+            // ChunkError::InvalidChunkType => write!(f, "Invalid Chunk Type"),
         }
     }
 }

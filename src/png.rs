@@ -57,15 +57,15 @@ impl Display for Png {
 impl Png {
     const STANDARD_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
 
-    fn from_chunks(chunks: Vec<Chunk>) -> Png {
+    pub fn from_chunks(chunks: Vec<Chunk>) -> Png {
         Png { chunks }
     }
 
-    fn append_chunk(&mut self, chunk: Chunk) {
+    pub fn append_chunk(&mut self, chunk: Chunk) {
         self.chunks.push(chunk);
     }
 
-    fn remove_chunk(&mut self, chunk_type: &str) -> crate::Result<Chunk> {
+    pub fn remove_chunk(&mut self, chunk_type: &str) -> crate::Result<Chunk> {
         let idx = self
             .chunks
             .iter()
@@ -75,21 +75,21 @@ impl Png {
         Ok(self.chunks.remove(idx))
     }
 
-    fn header(&self) -> &[u8; 8] {
+    pub fn header(&self) -> &[u8; 8] {
         &Png::STANDARD_HEADER
     }
 
-    fn chunks(&self) -> &[Chunk] {
+    pub fn chunks(&self) -> &[Chunk] {
         &self.chunks
     }
 
-    fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk> {
+    pub fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk> {
         self.chunks
             .iter()
             .find(|chunk: &&Chunk| chunk.chunk_type().to_string() == chunk_type)
     }
 
-    fn as_bytes(&self) -> Vec<u8> {
+    pub fn as_bytes(&self) -> Vec<u8> {
         let chunk_iters: Vec<u8> = self
             .chunks
             .iter()
@@ -117,7 +117,7 @@ impl fmt::Display for PngDecodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             PngDecodeError::InvalidHeader => write!(f, "Invalid Header"),
-            PngDecodeError::InvalidChunkType(s) => write!(f, "Chunk Type {s} was not found"),
+            PngDecodeError::InvalidChunkType(s) => write!(f, "Chunk Type {s} is invalid"),
             PngDecodeError::PngGeneralError(msg) => write!(f, "General Error with {msg}"),
         }
     }

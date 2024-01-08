@@ -59,39 +59,39 @@ impl ChunkType {
         self.bytes
     }
 
-    fn is_valid(&self) -> bool {
+    pub fn is_valid(&self) -> bool {
         (self.bytes.len() == 4)
             && ChunkType::is_reserved_bit_valid(self)
             && ChunkType::all_valid_bytes(self)
     }
 
-    fn is_valid_byte(byte: u8) -> bool {
+    pub fn is_valid_byte(byte: u8) -> bool {
         matches!(byte, 65..=90 | 97..=122)
     }
 
-    fn semantic_bit_is_zero(bit: u8) -> bool {
+    pub fn semantic_bit_is_zero(bit: u8) -> bool {
         bit & (1 << 5) == 0
     }
 
-    fn all_valid_bytes(&self) -> bool {
+    pub fn all_valid_bytes(&self) -> bool {
         self.bytes
             .iter()
             .all(|&byte| ChunkType::is_valid_byte(byte))
     }
 
-    fn is_critical(&self) -> bool {
+    pub fn is_critical(&self) -> bool {
         Self::semantic_bit_is_zero(self.bytes[0])
     }
 
-    fn is_public(&self) -> bool {
+    pub fn is_public(&self) -> bool {
         Self::semantic_bit_is_zero(self.bytes[1])
     }
 
-    fn is_reserved_bit_valid(&self) -> bool {
+    pub fn is_reserved_bit_valid(&self) -> bool {
         Self::semantic_bit_is_zero(self.bytes[2])
     }
 
-    fn is_safe_to_copy(&self) -> bool {
+    pub fn is_safe_to_copy(&self) -> bool {
         !Self::semantic_bit_is_zero(self.bytes[3])
     }
 }
