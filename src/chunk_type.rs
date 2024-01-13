@@ -92,13 +92,6 @@ impl ChunkType {
         matches!(byte, 65..=90 | 97..=122)
     }
 
-    /// Returns whether the semantic bit of a byte is zero.
-    ///
-    /// The semantic bit is the fifth bit from the right.
-    pub fn semantic_bit_is_zero(bit: u8) -> bool {
-        bit & (1 << 5) == 0
-    }
-
     /// Returns whether all bytes in the chunk type are valid characters.
     pub fn all_valid_bytes(&self) -> bool {
         self.bytes
@@ -111,6 +104,15 @@ impl ChunkType {
     /// A chunk type is critical if the case of the first character is uppercase.
     pub fn is_critical(&self) -> bool {
         Self::semantic_bit_is_zero(self.bytes[0])
+    }
+
+    /// Returns whether the semantic bit of a byte is zero.
+    ///
+    /// The semantic bit is the fifth bit from the right.
+    /// * This is used only in this file, the functions that utilize it are in in others.
+    /// * Be sure to track any changes for breakage
+    pub fn semantic_bit_is_zero(bit: u8) -> bool {
+        bit & (1 << 5) == 0
     }
 
     /// Returns whether the chunk type is public.
