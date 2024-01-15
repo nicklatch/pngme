@@ -12,6 +12,5 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 fn main() -> Result<()> {
     let args = Commands::parse();
-    let _ = commands::run(args.command);
-    Ok(())
+    commands::run(args.command)
 }
