@@ -32,12 +32,7 @@ impl TryFrom<&[u8]> for Png {
                     chunks.push(chunk);
                     cursor += length;
                 }
-                Err(_) => {
-                    return Err(PngDecodeError::PngGeneralError(String::from(
-                        "An unknown error has occured",
-                    ))
-                    .into());
-                }
+                Err(e) => return Err(e),
             }
         }
 
@@ -69,10 +64,12 @@ impl Png {
         let idx = self
             .chunks
             .iter()
-            .position(|chunk| chunk.chunk_type().to_string() == chunk_type)
-            .ok_or(PngDecodeError::InvalidChunkType(chunk_type.to_string()))?;
-
-        Ok(self.chunks.remove(idx))
+            .position(|chunk| chunk.chunk_type().to_string() == chunk_type);
+        
+        match idx {
+            Some(index) => Ok(self.chunks.remove(index)),
+            None => Err(PngDecodeError::InvalidChunkTypeGiven(chunk_type.to_string()).into()),
+        }
     }
 
     pub fn header(&self) -> &[u8; 8] {
@@ -107,8 +104,7 @@ impl Png {
 #[derive(Debug)]
 pub enum PngDecodeError {
     InvalidHeader,
-    InvalidChunkType(String),
-    PngGeneralError(String),
+    InvalidChunkTypeGiven(String),
 }
 
 impl Error for PngDecodeError {}
@@ -117,8 +113,10 @@ impl fmt::Display for PngDecodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             PngDecodeError::InvalidHeader => write!(f, "Invalid Header"),
-            PngDecodeError::InvalidChunkType(s) => write!(f, "Chunk Type {s} is invalid"),
-            PngDecodeError::PngGeneralError(msg) => write!(f, "General Error with {msg}"),
+            PngDecodeError::InvalidChunkTypeGiven(s) => write!(
+                f,
+                "The chunk type {s}, could not be removed because it does not exisit"
+            ),
         }
     }
 }
