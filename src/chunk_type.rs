@@ -13,7 +13,7 @@ pub struct ChunkType {
     bytes: [u8; 4],
 }
 
-// Converts a byte array into a `ChunkType`.
+// Trys to convert a byte array into a `ChunkType`.
 ///
 /// This will return an error if any of the bytes is not an ASCII alphabetic character.
 impl TryFrom<[u8; 4]> for ChunkType {
@@ -99,6 +99,7 @@ impl ChunkType {
             .all(|&byte| ChunkType::is_valid_byte(byte))
     }
 
+    // ?Should this just take an enum varient and a bit instead of coupling this function with each consumer fn?
     // * This is used only in this file by the next four functions, the functions that utilize it are in in others.
     // * Be sure to track any changes for breakage
     /// Returns whether the semantic bit of a byte is zero.
